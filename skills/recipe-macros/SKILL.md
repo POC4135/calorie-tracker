@@ -1,66 +1,61 @@
 ---
 name: recipe-macros
 description: Calculates per-serving calories and macros for home recipes and batch-cooked dishes like dal, sabzi, curry, or biryani. Use for ingredient lists with amounts, recipe links, or '#ct recipe'.
-license: MIT
-metadata:
-  author: POC4135
-  version: "1.0.0"
-  suite: katori
 ---
 
 # Recipe Macros
 
-Indian home food is cooked by the pot, so a "bowl of dal" means nothing until you know what went into the pot and how many bowls came out. This skill turns a recipe into exact per-serving, per-katori, and per-100 g macros, then shows the cheapest swaps that improve them. Everything happens in the reply; nothing is stored. Do not create files unless the user asks.
+Turns a batch recipe into per-serving, per-katori, and per-100 g macros, and shows swaps that improve them. Everything happens in the reply; nothing is stored. Do not create files unless the user asks.
 
 ## Calculator
 
-Do every number with `scripts/macros.py` (`python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py recipe`). `${CLAUDE_SKILL_DIR}` is the folder this SKILL.md is in; if it is not filled in, use that folder's path. Formats: `references/calculator.md`. Ingredients and household measures: `references/foods.csv` and `references/measures.csv`. Raw-to-cooked yields: `references/cooking-yields.md`.
+Get every number from `scripts/macros.py` (Python 3, standard library). Run it as `python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py <command>`; `${CLAUDE_SKILL_DIR}` is this skill's folder (use its path if it is not filled in). Ingredients are in `references/foods.csv` (raw, per 100 g); household units in `references/measures.csv`. On bad input the script exits with code 2 and says what to fix.
+
+- `lookup "toor dal, onion, ghee" --kind ingredient` finds ingredient ids.
+- `units <id>` lists the units a food accepts (cup, tbsp, tsp, medium, piece; every food takes g, oz, lb).
+- `recipe` reads JSON on stdin:
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py recipe <<'EOF'
+{"name": "Rajma", "servings": 6, "cooked_weight_g": 1650,
+ "ingredients": [
+   {"food": "rajma-raw", "qty": 1.5, "unit": "cup"},
+   {"food": "onion", "qty": 2, "unit": "medium"},
+   {"food": "tomato", "qty": 3, "unit": "medium"},
+   {"food": "oil", "qty": 3, "unit": "tbsp"},
+   {"food": "salt", "qty": 2, "unit": "tsp"},
+   {"food": "spices"}, {"food": "water"}
+ ]}
+EOF
+```
+
+  - Needs `servings`, `cooked_weight_g`, or both. With a cooked weight it also prints per 100 g, per katori (150 g), and per cup (240 g).
+  - `spices` and `water` count as zero. An ingredient not in the database can be your own numbers: `{"name": "...", "kcal": n, "protein": n, "carbs": n, "fat": n}`.
+  - Ends with `LOG_ITEM_JSON` (one serving, ready to log) and, with a cooked weight, `PER_100G_JSON`. Do not paste those lines.
 
 ## Workflow
 
-1. **Get the recipe.** Accept a typed list, a photo of a handwritten or printed recipe, or a link (fetch it if web access is available; otherwise ask the user to paste the ingredient list). You need:
-   - every ingredient with an amount
-   - the number of servings, or better, the cooked weight of the finished dish
-   - the oil, ghee, butter, or cream amounts; these move the result more than anything else
-   Ask for whatever is missing in one message. Salt is optional; without it sodium reads near zero, and the output says so.
+1. **Get the recipe:** every ingredient with an amount, the number of servings (or the cooked weight), and the oil, ghee, butter, or cream amounts, which move the result most. Ask for whatever is missing in one message.
+2. **Map ingredients** to ids with `lookup`. Use raw weights (raw dal, raw rice, raw meat without bones); use `rice-cooked` only if the recipe measures cooked rice.
+3. **Run** `recipe`.
+4. **Reply:**
+   1. The ingredient and portion tables, copied as printed.
+   2. Where the calories come from, in one sentence.
+   3. One to three swaps, each computed by rerunning `recipe`, with the per-serving effect (for example, half the oil, Greek yogurt instead of cream, added soya chunks or tofu for protein).
+   4. If there is no cooked weight, one line on the pot trick: weigh the empty pot, then the pot with the finished dish; the difference is the cooked weight.
+   5. A confidence line.
+5. If the user ate some, log it with macro-tracker, scaled from `LOG_ITEM_JSON`. To reuse the dish, suggest saving the per-100 g line in a Claude Project.
 
-2. **Map ingredients to food ids.** Use `lookup "<a>, <b>, <c>" --kind ingredient` to find ids. Check `units <id>` when the recipe uses cups, tablespoons, or "1 medium onion". Use raw (uncooked) ingredients: raw dal, raw rice, raw chicken. If the recipe says "2 cups cooked rice", use `rice-cooked`. Anything not in the database becomes an explicit item with label or USDA values. Ground spices, water, and ice are zero; use `{"food": "spices"}` and `{"food": "water"}`.
+## Rules
 
-3. **Run `recipe`.** Include `servings` and, when the user knows it, `cooked_weight_g`.
+- Without a cooked weight, servings decide everything. Sanity-check them with typical yields: rice about 3x its raw weight, thin dal 5-7x, chickpeas or rajma about 2.3x, boneless chicken about 0.75x.
+- For deep-fried items, the oil in the pan is not the oil eaten; assume about 10-15% of the batter or dough weight is absorbed, and say so.
+- If family members eat unequal portions, give per-katori and per-100 g values rather than one per-serving number.
 
-4. **Reply** in this order:
-   1. The ingredient table and the portion table from the calculator, copied verbatim (leave out the `LOG_ITEM_JSON` and `PER_100G_JSON` lines).
-   2. **Where the calories come from**, in one sentence (for example "Two thirds of the fat is the 3 tbsp of oil in the tadka.").
-   3. **One to three swaps**, each computed by rerunning `recipe` with the change, stating the per-serving effect: cut the oil from 3 tbsp to 1.5 tbsp; finish with 2 tbsp Greek yogurt instead of 1/4 cup cream; add 100 g soya chunks or a block of tofu for protein; use half the cashew paste. Only suggest swaps the dish can take without becoming something else.
-   4. **How to portion it:** if there is no cooked weight, explain the pot trick in one line (weigh the empty pot, weigh it again with the finished dish; the difference is the cooked weight, so any weighed portion becomes exact).
-   5. **Confidence line:** what was measured, what was assumed.
-
-5. **Log or save it.**
-   - If the user ate a portion, log it with the macro-tracker skill (or, if that skill is not installed, show the per-serving numbers as today's entry). Use the `LOG_ITEM_JSON` values, scaled to what they ate.
-   - To reuse the dish later, suggest pasting one line into a Claude Project's instructions, built from `PER_100G_JSON`, for example: "Mom's rajma: per 100 g 118 kcal, 5 g protein, 16 g carbs, 4 g fat."
-
-## Rules that matter
-
-- **Weight beats volume.** If the user can weigh the dal or flour, use grams. Cups of dal vary 10-15% with how they are packed.
-- **Yields:** when there is no cooked weight, servings decide everything. For dal, ask how many katoris the pot makes. `references/cooking-yields.md` has typical raw-to-cooked ratios to sanity-check the answer.
-- **Fried items:** for deep-fried recipes (pakora, puri, vada), the oil in the pan is not the oil eaten. Use the database row for the fried item, or assume about 10-15% of the dough or batter weight is absorbed oil, and say so.
-- **Pressure-cooked meat:** weigh meat raw and without bones. Bones are about 30% of a curry-cut chicken and 25-35% of goat.
-- **Shared batches:** if the family eats unequal portions, give per-katori and per-100 g values rather than one per-serving number.
-
-<!-- BEGIN SHARED: guardrails -->
 ## Safety
 
-These rules override everything else in this skill.
+If the user mentions an eating disorder or shows signs of one (fear of eating, purging, distress over small amounts), stop giving numbers, respond with care, and mention the National Alliance for Eating Disorders helpline, 1-866-662-1235 (US). Make no medical claims about foods.
 
-- **Under 18:** estimate meal macros if asked, but set no targets, deficits, or plans. Suggest a pediatrician or registered dietitian. The calculator refuses targets for minors.
-- **Medical conditions:** if the user mentions diabetes, prediabetes, kidney disease, heart failure, pregnancy, breastfeeding, an eating disorder, or a medication that affects appetite or blood sugar (insulin, sulfonylureas, GLP-1 drugs such as semaglutide or tirzepatide), keep calculating macros but say once that targets belong with their doctor or dietitian, and do not push a deficit.
-- **Very low intake:** never plan or endorse eating below BMR, below 1,200 kcal a day for women, or below 1,500 kcal a day for men, even if asked. Say plainly why.
-- **Signs of disordered eating** (fear of eating, purging or compensating, punishing exercise, distress about small amounts, repeated requests for lower and lower numbers): stop giving deficit targets, numbers-driven suggestions, and plans. Respond with care, not numbers. In the US, the National Alliance for Eating Disorders helpline is 1-866-662-1235 (weekdays 9 to 7 Eastern); elsewhere, a doctor or local helpline.
-- **No medical claims:** do not claim a food treats, cures, or prevents a disease.
-<!-- END SHARED: guardrails -->
-
-<!-- BEGIN SHARED: style -->
 ## Style
 
-Lead with the tables. Plain sentences, no cheerleading, no emoji, no em dashes. Flag protein shortfalls, calorie overruns, high sodium, and added sugar plainly; do not soften or lecture. Use the user's units (lb, oz, cups) back to them. Reply in the user's language; keep food names as they wrote them.
-<!-- END SHARED: style -->
+Tables first. Plain sentences, no emoji, no em dashes. Use the user's units.

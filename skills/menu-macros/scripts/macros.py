@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Katori macro calculator: targets, food lookup, meal logging, recipes and plan checks.
+"""Macro calculator: targets, food lookup, meal logging, recipes and plan checks.
 
-Standard library only (Python 3.8+). Every number Katori shows the user should come
-from this script, because language models make arithmetic slips on long tables.
+Standard library only (Python 3.8+). Every number shown to the user should come from
+this script, because language models make arithmetic slips on long tables.
 
 Commands
   targets   Daily calorie and macro targets from age, sex, height, weight, BMR, activity, goal.
@@ -13,8 +13,7 @@ Commands
   recipe    Per-serving macros for a batch recipe. Reads JSON on stdin.
   plan      Check a day plan against targets. Reads JSON on stdin.
 
-Run any command with -h for its options. The JSON formats are documented in
-references/calculator.md inside each skill.
+Run any command with -h for its options. The JSON formats are documented in SKILL.md.
 """
 
 import argparse
@@ -103,17 +102,15 @@ class InputError(Exception):
 def _data_dir():
     here = os.path.dirname(os.path.abspath(__file__))
     candidates = [
-        os.environ.get("KATORI_DATA_DIR", ""),
+        os.environ.get("MACROS_DATA_DIR", ""),
         os.path.join(here, "..", "references"),
-        os.path.join(here, "..", "..", "data"),
-        os.path.join(here, "..", "..", "..", "data"),
     ]
     for path in candidates:
         if path and os.path.isfile(os.path.join(path, "foods.csv")):
             return os.path.abspath(path)
     raise InputError(
         "Could not find foods.csv. Expected it in the skill's references/ folder "
-        "or set KATORI_DATA_DIR to the folder that holds it."
+        "or set MACROS_DATA_DIR to the folder that holds it."
     )
 
 
@@ -191,7 +188,7 @@ def compute_targets(age, sex, height_cm, weight_kg, activity, goal,
     if age < 18:
         raise InputError(
             "Targets are for adults. For anyone under 18, set targets with a pediatrician "
-            "or registered dietitian; Katori can still estimate meal macros."
+            "or registered dietitian; meal macros can still be estimated."
         )
     if not 120 <= height_cm <= 230:
         raise InputError(f"Height {height_cm:.0f} cm looks wrong. Give height in cm, or feet and inches.")

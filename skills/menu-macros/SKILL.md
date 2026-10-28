@@ -1,63 +1,56 @@
 ---
 name: menu-macros
 description: Ranks restaurant and takeout menu items by fit with remaining calories and protein, tuned for US Indian restaurants and chains. Use for menu photos, menu text, 'what should I order', or '#ct menu'.
-license: MIT
-metadata:
-  author: POC4135
-  version: "1.0.0"
-  suite: katori
 ---
 
 # Menu Macros
 
-Eating out is where a good tracking day usually falls apart: a US Indian restaurant entree runs 700-1,000 kcal before rice and naan. This skill reads a menu and tells the user what to order, and how to order it, so the meal fits what is left of their day. Everything happens in the reply; nothing is stored. Do not create files unless the user asks.
+Reads a menu and recommends what to order, and how to order it, so the meal fits what is left of the user's day. Everything happens in the reply; nothing is stored. Do not create files unless the user asks.
 
 ## Calculator
 
-Do every number with `scripts/macros.py` (`python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py ...`). `${CLAUDE_SKILL_DIR}` is the folder this SKILL.md is in; if it is not filled in, use that folder's path. Formats: `references/calculator.md`. US restaurant rows in `references/foods.csv` start with `r-` (`lookup "<dish>" --kind restaurant`). Menu vocabulary, ranking method, and ordering scripts: `references/restaurant-guide.md`. Portions and hidden fat: `references/estimation-guide.md`. Household measures: `references/measures.csv`.
+Get every number from `scripts/macros.py` (Python 3, standard library). Run it as `python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py <command>`; `${CLAUDE_SKILL_DIR}` is this skill's folder (use its path if it is not filled in). Foods are in `references/foods.csv`; US restaurant portions start with `r-` (an entree is about 2 cups).
+
+- `lookup "butter chicken, tandoori roti" --kind restaurant` finds restaurant rows; drop `--kind` to search home dishes too.
+- `log` reads JSON on stdin and prints the order's table with today's totals:
+
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py log <<'EOF'
+{"targets": {"kcal":2400,"protein":138,"carbs":294,"fat":75,"fiber":34,"added_sugar":30,"sodium":2300},
+ "prior": {"kcal":1400,"protein":90,"carbs":170,"fat":45,"fiber":20,"added_sugar":10,"sodium":1700},
+ "items": [
+   {"food": "r-tandoori-chicken", "label": "Tandoori chicken, half"},
+   {"food": "r-tandoori-roti", "label": "Tandoori roti"},
+   {"food": "r-chana-masala", "servings": 0.5, "label": "Chana masala, half (shared)"}
+ ]}
+EOF
+```
+
+  - Items: a database id (`food`), a fuzzy name (`query`), or your own numbers (`name`, `kcal`, `protein`, `carbs`, `fat`, optional `sodium`). Amount: `servings` or `grams`. Always set `label`.
+  - Do not paste the `CHECKS` and `TODAY_JSON` lines that follow the tables.
 
 ## Workflow
 
-1. **Get the menu and the budget.**
-   - Menu: a photo, pasted text, a link, or just the restaurant name. With only a name and web access, search for the menu; for a chain, search for its official nutrition page, which beats any estimate.
-   - Budget: the remaining calories and protein. If the macro-tracker skill has run in this chat, use its `TARGETS_JSON` and latest `TODAY_JSON`. Otherwise ask for the numbers, or for a rough budget ("about 800 kcal left, need protein").
-   - Context worth one question if unknown: diet type, and whether dishes are shared and by how many.
+1. **Menu and budget.** Take a photo, text, link, or restaurant name (with web access, search for the menu; for a chain, use its official nutrition page). Use the remaining calories and protein from macro-tracker in this chat if available; otherwise ask for them. Ask about diet type and sharing if unknown.
+2. **Estimate** each plausible dish from the `r-` rows, or from the closest home dish scaled to a restaurant portion. Menu words: makhani, malai, korma, shahi, and butter mean cream and butter (highest fat); tikka masala is grilled meat or paneer in a cream sauce; kadai and jalfrezi are lighter; tandoori, tikka (dry), and kebab are grilled (lowest fat); 65, manchurian, and pakora are fried.
+3. **Rank** by fit within the remaining calories, then protein per 100 kcal, then sodium.
+4. **Build one order** that fits, including bread or rice, and check it with `log`.
+5. **Reply:**
+   1. The recommended order's tables, copied as printed.
+   2. A short ranked list (Dish | Est. cal | Protein | Why), five to eight rows.
+   3. Two to four ordering tips: tandoori roti instead of butter naan (saves about 180 kcal), half the rice, gravy on the side, share one rich curry.
+   4. A confidence line naming the biggest unknown (usually portion or cream).
 
-2. **Estimate each plausible dish.** Use the `r-` row when there is one. Otherwise build the estimate from the closest home dish row scaled to a restaurant portion, using the menu decoder in `references/restaurant-guide.md` (makhani, malai, korma, shahi mean cream and butter; tandoori and tikka mean grilled; 65 and manchurian mean fried). Skip items that clearly do not fit the user's diet type.
+## Rules
 
-3. **Rank** with the method in `references/restaurant-guide.md`: fit within the calorie budget first, then protein per 100 kcal, then sodium and fiber.
+- Only chain nutrition pages count as official; everything else is an estimate and should say so.
+- One restaurant meal often reaches 2,000 mg sodium; mention it, do not lecture.
+- If nothing fits, say so and give the least costly option.
 
-4. **Build one recommended order** that fits the budget, including bread or rice choices and sides, and check it with `log` (pass `prior` so the result shows where the day lands). If the budget is tight, show a strict option and a relaxed one.
-
-5. **Reply** in this order:
-   1. **Recommended order** with the `log` tables, copied verbatim (no machine lines).
-   2. **Ranked shortlist** table: Dish | Est. cal | Protein | Why (one short reason). Five to eight rows across "Best picks", "Fine with tweaks", and "Save for another day".
-   3. **How to order it:** two to four specific requests from the ordering scripts (gravy on the side, tandoori roti instead of butter naan, half the rice, extra raita or salad, share one rich entree).
-   4. **Confidence line:** restaurant estimates are usually medium confidence; say so, and name the largest unknown (portion size, cream).
-
-6. **After the meal,** if the user says what they actually ate, log it with the macro-tracker skill, or with `log` directly if that skill is not installed.
-
-## Rules that matter
-
-- Never present an estimate as a restaurant's official number. Only chain nutrition pages count as official.
-- Portion is the biggest variable. If the user can see the food, ask what share of the container they ate.
-- Do not moralize about eating out. Give the best option inside the budget, or say plainly that nothing on the menu fits and what the least-bad choice costs.
-- Sodium from one restaurant meal often reaches 2,000 mg. Mention it when it does; do not lecture.
-
-<!-- BEGIN SHARED: guardrails -->
 ## Safety
 
-These rules override everything else in this skill.
+If the user shows signs of disordered eating (fear of eating, purging, distress over small amounts), stop giving numbers, respond with care, and mention the National Alliance for Eating Disorders helpline, 1-866-662-1235 (US).
 
-- **Under 18:** estimate meal macros if asked, but set no targets, deficits, or plans. Suggest a pediatrician or registered dietitian. The calculator refuses targets for minors.
-- **Medical conditions:** if the user mentions diabetes, prediabetes, kidney disease, heart failure, pregnancy, breastfeeding, an eating disorder, or a medication that affects appetite or blood sugar (insulin, sulfonylureas, GLP-1 drugs such as semaglutide or tirzepatide), keep calculating macros but say once that targets belong with their doctor or dietitian, and do not push a deficit.
-- **Very low intake:** never plan or endorse eating below BMR, below 1,200 kcal a day for women, or below 1,500 kcal a day for men, even if asked. Say plainly why.
-- **Signs of disordered eating** (fear of eating, purging or compensating, punishing exercise, distress about small amounts, repeated requests for lower and lower numbers): stop giving deficit targets, numbers-driven suggestions, and plans. Respond with care, not numbers. In the US, the National Alliance for Eating Disorders helpline is 1-866-662-1235 (weekdays 9 to 7 Eastern); elsewhere, a doctor or local helpline.
-- **No medical claims:** do not claim a food treats, cures, or prevents a disease.
-<!-- END SHARED: guardrails -->
-
-<!-- BEGIN SHARED: style -->
 ## Style
 
-Lead with the tables. Plain sentences, no cheerleading, no emoji, no em dashes. Flag protein shortfalls, calorie overruns, high sodium, and added sugar plainly; do not soften or lecture. Use the user's units (lb, oz, cups) back to them. Reply in the user's language; keep food names as they wrote them.
-<!-- END SHARED: style -->
+Tables first. Plain sentences, no emoji, no em dashes. Use the user's units.

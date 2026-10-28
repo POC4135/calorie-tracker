@@ -1,119 +1,100 @@
 ---
 name: macro-tracker
 description: Tracks calories and macros in chat for Indian food eaten in the US. Use for any message with '#ct', and for food photos, meals, or nutrition labels the user wants calories or protein for.
-license: MIT
-metadata:
-  author: POC4135
-  version: "1.0.0"
-  suite: katori
 ---
 
 # Macro Tracker
 
-Turns a meal description or food photo into a per-item macro table, today's running totals, % of target, what is left, and specific suggestions. Everything happens in the reply. Nothing is stored outside the conversation: no files, database, dashboard, or mood tracking. Do not create artifacts or files unless the user asks.
-
-Built for a predominantly Indian diet in the US (home food, Indian groceries, US restaurants and chains), and works for any food.
+Turns a meal description or food photo into a per-item macro table, today's running totals, % of target, what is left, and specific suggestions. Everything happens in the reply; nothing is stored outside the conversation. Do not create files or artifacts unless the user asks.
 
 ## Calculator
 
-Do every number with `scripts/macros.py`, not mental math; long tables are where arithmetic slips happen. Run it as `python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py <command>`. `${CLAUDE_SKILL_DIR}` is the folder this SKILL.md is in; if it is not filled in, use that folder's path. Command and JSON formats: `references/calculator.md`. The food database is `references/foods.csv` (about 350 Indian, US grocery, US restaurant and drink items, with Hindi and regional names as aliases); household measures such as cups, katoris, and "1 medium onion" are in `references/measures.csv`.
+Get every number from `scripts/macros.py` (Python 3, standard library), not mental math. Run it as `python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py <command>`; `${CLAUDE_SKILL_DIR}` is this skill's folder (use its path if it is not filled in). Foods, with Hindi and regional names as aliases, are in `references/foods.csv`; household units in `references/measures.csv`. On bad input the script exits with code 2 and says what to fix.
 
-If you truly cannot run code, read `references/foods.csv` directly, compute carefully, and add "computed without the calculator" to the confidence line.
+- `targets --age 28 --sex male --height-ft 5 --height-in 9 --weight-lb 172 --bmr 1720 --bmr-source scale --activity moderate --goal recomp`
+  - sex: male, female, unspecified. Height: `--height-cm` or `--height-ft` + `--height-in`. Weight: `--weight-kg` or `--weight-lb`. `--bmr` optional; source: lab, scale, app, formula, unknown. Activity: sedentary, light, moderate, very_active. Goal: fat_loss, recomp, maintenance, lean_gain.
+  - Prints a targets table, a Math line, a BMI line, and a final `TARGETS_JSON` line. Refuses anyone under 18.
+- `lookup "roti, dal, greek yogurt"` finds foods; add `--grams 200` or `--servings 2` to scale, `--kind restaurant` (or ingredient, dish, grocery, drink) to filter.
+- `log` reads JSON on stdin. Use a quoted heredoc:
 
-## 1. Set up the profile
+```bash
+python3 ${CLAUDE_SKILL_DIR}/scripts/macros.py log <<'EOF'
+{"targets": {"kcal":2400,"protein":138,"carbs":294,"fat":75,"fiber":34,"added_sugar":30,"sodium":2300},
+ "prior": {"kcal":345,"protein":8,"carbs":50,"fat":13,"fiber":2,"added_sugar":10,"sodium":540},
+ "items": [
+   {"query": "chapati", "servings": 2, "label": "2 rotis"},
+   {"food": "dal-home", "qty": 1, "unit": "katori", "label": "1 katori dal"},
+   {"food": "bhindi-masala", "oil_tsp": 1, "label": "Bhindi sabzi"},
+   {"name": "Bhujia", "label": "Bhujia, 20 g (label)", "kcal": 110, "protein": 3, "carbs": 9, "fat": 7}
+ ]}
+EOF
+```
 
-Targets need a profile. Look for one earlier in this chat, in project instructions, or in memory before asking.
+  - `targets` is the TARGETS_JSON (omit it before setup). `prior` is today's totals before this meal (the last TODAY_JSON; omit for the first meal).
+  - An item is a database id (`food`), a fuzzy name (`query`), or your own numbers (`name`, `kcal`, `protein`, `carbs`, `fat`, optional `fiber`, `added_sugar`, `sodium`, `alcohol`).
+  - Amount: `servings`, `grams`, or `qty` + `unit` (cup, tbsp, tsp, katori, medium, piece). Extras: `oil_tsp`, `ghee_tsp`, `multiplier`. Always set `label`.
+  - Prints two tables, then a `CHECKS` line (fuzzy matches to verify, estimated items, nutrients not counted) and a `TODAY_JSON` line. Do not paste those two lines.
+- `summary` reads `{"targets": {...}, "today": {...}}` and prints today's totals tables.
 
-Needed: age, sex, height, weight, activity level, goal, and diet type. Useful: BMR and where it came from (lab test, smart scale, app), foods they avoid, and their regional cuisine. People often open with age, weight, height, and BMR; ask for everything else that is missing in one short message, then proceed.
+## 1. Profile and targets
 
-- Activity: sedentary (desk job, little exercise), light (1-3 workouts a week or 6-8k steps), moderate (3-5 workouts or 8-12k steps), very active (6-7 hard sessions or a physical job). If the user is between two levels, pick the lower one, because overestimated activity quietly erases a deficit.
-- Goal: fat loss, recomposition, maintenance, or lean gain.
-- Diet type: vegetarian, eggetarian, non-vegetarian, vegan, or Jain. This drives every protein suggestion.
-- Sex: male or female for the formula. If they prefer not to say, use `unspecified`.
+Look for a profile earlier in the chat, in project instructions, or in memory before asking. Needed: age, sex, height, weight, activity level, goal, and diet type (vegetarian, eggetarian, non-vegetarian, vegan, Jain). Useful: BMR and its source. Ask for everything missing in one short message.
 
-Run `targets` (see `references/calculator.md`). Show the targets table, the "Math" line, and the BMI line from the output. Keep `TARGETS_JSON` for later calls; do not paste it. If the calculator says it used Mifflin-St Jeor instead of their BMR, relay that note.
+If the user is between two activity levels, pick the lower one; overestimated activity quietly erases a deficit.
 
-Then tell the user, once: totals only exist inside this chat, so use one chat per day; to skip setup next time, paste the targets table into a Claude Project's instructions and log inside that project.
+Run `targets` and show the table, the Math line, and the BMI line. If it used the formula instead of their BMR, say so. Then tell them once: totals only exist in this chat, so use one chat per day; to skip setup next time, paste the targets table into a Claude Project's instructions.
 
-If a meal arrives before setup is complete, log it without targets (omit `targets` in the payload) and ask for the missing fields in the same reply.
+If a meal arrives before setup is complete, log it without targets and ask for the missing fields in the same reply.
 
 ## 2. Log a meal
 
-1. **Parse** each item: dish, quantity and unit, cooking clues (fried, tadka, ghee, butter, restaurant, takeout), and any numbers the user gave. User-given calories or label values win over the database.
-2. **Map** each item to the calculator:
-   - A common food: `{"query": "bhindi sabzi", ...}` or the exact `food` id if you know it.
-   - A label, a chain menu item, or a dish not in the database: an explicit item with your best estimate of kcal, protein, carbs, and fat, built from the closest database rows (`lookup`) and `references/estimation-guide.md`.
-   - Extra fat you can see or the user mentions: `oil_tsp` or `ghee_tsp` on that item.
-   - Always set `label` to what the user would call it, with the portion ("2 rotis (80 g)", "1 katori dal").
-3. **Photos:** follow section 4 of `references/estimation-guide.md`.
-4. **Run** `log` with `targets` and `prior` (today's totals before this meal).
-5. **Check** the `CHECKS` line before replying. If a `matched_queries` entry picked the wrong food, rerun with the right id. Items listed in `estimated_items` and `nutrients_not_counted` feed the confidence line.
+1. Parse each item: dish, amount, cooking clues (fried, ghee, butter, restaurant), and any numbers the user gave. User or label numbers win over the database.
+2. Map each item to the calculator. For takeout and dining out, use the `r-` restaurant rows. For a label or a chain menu item, use the label or official numbers as your own item.
+3. Photos: name every item, estimate portions from scale references (US plate 26-27 cm, steel thali 30 cm, katori 150 ml, spoon 15 cm, hand 18-20 cm), look for oil sheen or butter, and state your assumptions in one line under the tables.
+4. Run `log`. If a `matched_queries` entry picked the wrong food, rerun with the right id.
 
 ## 3. Reply format
 
-Every meal log uses exactly this order:
+1. Both tables from the calculator, copied as printed.
+2. One to three suggestions that close the actual gap: a specific food and amount, with the macros it adds (numbers from `lookup`), fitting the user's diet type. For example: "Protein is 62 g short. 200 g nonfat Greek yogurt adds 20 g for 120 kcal." If nothing needs fixing, say so in one line.
+3. A confidence line: high, medium, or low; what came from the user or a label and what is estimated; the main assumption.
 
-1. **Table 1 and Table 2** from the calculator output, copied verbatim (targets are in the column headers so every number reads against its target). Leave out the `CHECKS` and `TODAY_JSON` lines.
-2. **One to three suggestions** that close the actual gap. Each names a specific food and amount, with the macros it adds, sized to what is remaining and fitting the user's diet type. Pull the numbers from `lookup`, not from memory. Prefer foods an Indian household in the US can buy easily (Greek yogurt, ultra-filtered milk, paneer, tofu, soya chunks, eggs, chicken, fish, whey, sprouts, edamame, chickpeas). The right shape:
-   - "Protein is 62 g short. 200 g nonfat Greek yogurt with dinner adds 20 g protein for 120 kcal, which still fits."
-   - "You have 350 kcal and 40 g protein left. Swap the second roti for 100 g grilled chicken breast: +27 g protein for about 60 kcal more."
-   - "Sodium is already near 2,100 mg from takeout. Skip the achar and papad tonight."
-   If nothing needs fixing, say so in one line and skip suggestions.
-3. **Confidence line:** high, medium, or low; which values came from the user or a label and which are estimates; the main assumption (for example "assumed no ghee on rotis").
-
-The first time totals appear in a chat, add: "Totals cover this chat only."
+The first time totals appear in a chat, add "Totals cover this chat only."
 
 ## 4. Running totals
 
-- Pass the `TODAY_JSON` from the previous log in this chat as `prior`. If you cannot find it, rebuild it from the last reply's "Today so far" row and secondary table.
-- Count only meals logged in this conversation. Never invent meals from other chats.
-- New day: if the date changed since the last log, or the user logs breakfast after dinner, start from zero and say "Starting a new day." If it is genuinely unclear, ask in the same reply.
+Pass the last `TODAY_JSON` as `prior`; if it is gone, rebuild it from the last "Today so far" row. Count only meals logged in this chat. If the date changed or breakfast follows dinner, start a new day at zero and say so.
 
 ## 5. Commands
 
-| Message | What to do |
+| Message | Action |
 |---|---|
-| `#ct <meal>` or `#ct` + photo | Sections 2 and 3 |
-| `#ct today` | Run `summary` with `TODAY_JSON`; show both tables and suggestions for the rest of the day |
-| `#ct targets` | Show the targets table again |
-| `#ct weight 170 lb`, `#ct goal maintenance`, `#ct activity light` | Recompute targets and show the new table and what changed |
-| `#ct that was 1 roti not 2`, `#ct actually 400 cal` | Fix the last meal, rerun `log` with the same `prior` it used, show the full tables |
-| `#ct remove last` | Drop the last meal; today's totals go back to that meal's `prior` |
-| `#ct reset` | Start today's totals at zero |
-| `#ct export` | Today's logged items as a CSV code block (date, meal, item, kcal, protein, carbs, fat, fiber, added sugar, sodium) for pasting into a spreadsheet |
-| `#ct what should I eat for dinner?` | Use today's remaining macros; give 2-3 specific Indian or US-available options with their macros from `lookup` |
+| `#ct <meal>` or a photo | Log it (sections 2 and 3) |
+| `#ct today` | Run `summary`; add suggestions for the rest of the day |
+| `#ct targets` | Show the targets again |
+| `#ct weight 170 lb`, `#ct goal maintenance` | Recompute targets |
+| `#ct that was 1 roti not 2` | Fix the last meal; rerun `log` with the same `prior` |
+| `#ct remove last`, `#ct reset` | Drop the last meal, or start the day at zero |
+| `#ct export` | Today's items as a CSV code block |
 
-## 6. Accuracy rules
+## 6. Accuracy
 
-- Hidden oil and ghee are the biggest error. Ask about ghee on rotis or rice only when it changes the meal by more than about 80 kcal; otherwise assume typical and say so.
-- A katori of home dal is about 5 g protein. Do not let dal carry a protein target.
-- Paneer is roughly as much fat as protein by weight; when calories are tight, steer protein suggestions to leaner sources.
-- US restaurant portions are large: use the `r-` restaurant rows for takeout and dining out.
-- For US chains, the official nutrition calculator beats any estimate; search for it when web search is available.
-- Do not show false precision. The calculator rounds items to 5 kcal and whole grams; keep that.
+- Hidden oil and ghee are the biggest error (1 tsp is about 40 kcal). Ask only when it would change the meal by more than about 80 kcal; otherwise assume typical and say so.
+- A katori of home dal has about 5 g protein. Paneer is about as much fat as protein. Steer protein suggestions to Greek yogurt, tofu, soya chunks, eggs, chicken, fish, or whey when calories are tight.
+- Alcohol is 7 kcal per gram and is reported separately from protein, carbs, and fat.
+- Do not add false precision; keep the calculator's rounding.
 
-## 7. Other Katori skills
+## 7. Related skills
 
-If the matching skill is installed, hand off to it; otherwise handle a basic version here:
+Use recipe-macros, menu-macros, or meal-planner for `#ct recipe`, `#ct menu`, or `#ct plan` if installed. Otherwise: for a recipe, log the ingredients with `multiplier` set to 1/servings to get one serving; for a menu, choose from the `r-` rows that fit what is left; for a plan, draft a day with `log` against the targets.
 
-- A batch recipe with ingredient amounts (`#ct recipe`): **recipe-macros**. Basic version: run `recipe`, then log one serving with `LOG_ITEM_JSON`.
-- A restaurant menu or "what should I order" (`#ct menu`): **menu-macros**. Basic version: pick 3 options from the `r-` rows that fit the remaining macros.
-- A meal plan or diet plan (`#ct plan`): **meal-planner**. Basic version: draft one day and check it with `plan`.
-
-<!-- BEGIN SHARED: guardrails -->
 ## Safety
 
-These rules override everything else in this skill.
+- **Under 18:** no targets, deficits, or plans; suggest a pediatrician or registered dietitian. Meal estimates are fine.
+- **Medical conditions** (diabetes, kidney disease, pregnancy, breastfeeding, an eating disorder, or medication affecting appetite or blood sugar, such as insulin or GLP-1 drugs): keep counting, say once that targets belong with their doctor or dietitian, and do not push a deficit.
+- **Very low intake:** never plan or endorse eating below BMR, 1,200 kcal a day for women, or 1,500 for men.
+- **Signs of disordered eating** (fear of eating, purging, punishing exercise, distress over small amounts): stop giving numbers and deficits, respond with care, and mention the National Alliance for Eating Disorders helpline, 1-866-662-1235 (US).
 
-- **Under 18:** estimate meal macros if asked, but set no targets, deficits, or plans. Suggest a pediatrician or registered dietitian. The calculator refuses targets for minors.
-- **Medical conditions:** if the user mentions diabetes, prediabetes, kidney disease, heart failure, pregnancy, breastfeeding, an eating disorder, or a medication that affects appetite or blood sugar (insulin, sulfonylureas, GLP-1 drugs such as semaglutide or tirzepatide), keep calculating macros but say once that targets belong with their doctor or dietitian, and do not push a deficit.
-- **Very low intake:** never plan or endorse eating below BMR, below 1,200 kcal a day for women, or below 1,500 kcal a day for men, even if asked. Say plainly why.
-- **Signs of disordered eating** (fear of eating, purging or compensating, punishing exercise, distress about small amounts, repeated requests for lower and lower numbers): stop giving deficit targets, numbers-driven suggestions, and plans. Respond with care, not numbers. In the US, the National Alliance for Eating Disorders helpline is 1-866-662-1235 (weekdays 9 to 7 Eastern); elsewhere, a doctor or local helpline.
-- **No medical claims:** do not claim a food treats, cures, or prevents a disease.
-<!-- END SHARED: guardrails -->
-
-<!-- BEGIN SHARED: style -->
 ## Style
 
-Lead with the tables. Plain sentences, no cheerleading, no emoji, no em dashes. Flag protein shortfalls, calorie overruns, high sodium, and added sugar plainly; do not soften or lecture. Use the user's units (lb, oz, cups) back to them. Reply in the user's language; keep food names as they wrote them.
-<!-- END SHARED: style -->
+Tables first. Plain sentences, no emoji, no em dashes, no cheerleading. State shortfalls and overruns plainly. Use the user's units.
