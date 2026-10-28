@@ -1,0 +1,43 @@
+name: Add or fix a food
+description: A dish, ingredient, packaged food, or restaurant item that is missing or has wrong values.
+title: "Food: "
+labels: ["data"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks! Values with a source get added fastest.
+  - type: input
+    id: food
+    attributes:
+      label: Food
+      description: The name you use, plus other names if you know them.
+      placeholder: "Pesarattu (moong dal dosa), pesara dosa"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options:
+        - Home dish
+        - Raw ingredient
+        - Packaged or grocery item
+        - US restaurant item
+        - Drink
+    validations:
+      required: true
+  - type: textarea
+    id: values
+    attributes:
+      label: Serving and values
+      description: Serving size, then calories, protein, carbs, fat (and fiber, sugar, sodium if you have them).
+      placeholder: "1 dosa, about 100 g: 180 kcal, 9 g protein, 24 g carbs, 5 g fat"
+  - type: textarea
+    id: source
+    attributes:
+      label: Source
+      description: A USDA FoodData Central link, a label photo, or the recipe with amounts.
+  - type: textarea
+    id: wrong
+    attributes:
+      label: If fixing a value, what looks wrong?

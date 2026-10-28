@@ -1,0 +1,10 @@
+{"db_id": "soya-chunks-curry", "name": "Soya chunks curry", "servings": 1, "cooked_weight_g": 230,
+ "source": "One serving: 30 g dry soya chunks soaked and squeezed, cooked in onion-tomato masala with 1.5 tsp oil and 1/4 tsp salt.",
+ "ingredients": [
+  {"food": "soya-chunks-raw", "grams": 30},
+  {"food": "onion", "grams": 50},
+  {"food": "tomato", "grams": 60},
+  {"food": "oil", "qty": 1.5, "unit": "tsp"},
+  {"food": "ginger-garlic-paste", "qty": 1, "unit": "tsp"},
+  {"food": "salt", "qty": 0.25, "unit": "tsp"},
+  {"food": "spices"}, {"food": "water"}]}

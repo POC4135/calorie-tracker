@@ -1,0 +1,11 @@
+{"db_id": "dal-home", "name": "Home dal tadka", "servings": 6, "cooked_weight_g": 1400,
+ "source": "Everyday North Indian toor dal for a family of four: 1 cup dal pressure-cooked and thinned, onion-tomato masala, 1 tbsp oil and 1 tsp ghee in the tadka, 1 1/4 tsp salt. About 1.4 kg (6 cups) finished.",
+ "ingredients": [
+  {"food": "toor-dal-raw", "qty": 1, "unit": "cup"},
+  {"food": "onion", "qty": 1, "unit": "small"},
+  {"food": "tomato", "qty": 1, "unit": "medium"},
+  {"food": "oil", "qty": 1, "unit": "tbsp"},
+  {"food": "ghee", "qty": 1, "unit": "tsp"},
+  {"food": "ginger-garlic-paste", "qty": 1, "unit": "tsp"},
+  {"food": "salt", "qty": 1.25, "unit": "tsp"},
+  {"food": "spices"}, {"food": "water"}]}

@@ -1,0 +1,3 @@
+{"db_id": "jowar-bhakri", "name": "Jowar bhakri", "servings": 1,
+ "source": "One bhakri patted from 40 g jowar flour with a pinch of salt.",
+ "ingredients": [{"food": "jowar-flour", "grams": 40}, {"food": "salt", "grams": 0.25}, {"food": "water"}]}

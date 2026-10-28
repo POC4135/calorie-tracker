@@ -1,0 +1,3 @@
+# Only needed to develop Katori; the skills themselves use the Python standard library.
+pytest>=7
+pyyaml>=6

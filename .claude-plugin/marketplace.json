@@ -1,0 +1,31 @@
+{
+  "name": "katori",
+  "description": "Katori: chat-only calorie and macro tracking for Indian food eaten in the US.",
+  "owner": {
+    "name": "POC4135",
+    "url": "https://github.com/POC4135"
+  },
+  "plugins": [
+    {
+      "name": "katori",
+      "source": "./",
+      "description": "Log meals from text or photos, get recipe macros, pick restaurant orders, and build meal plans checked against your calorie and protein targets.",
+      "version": "1.0.0",
+      "author": {
+        "name": "POC4135",
+        "url": "https://github.com/POC4135"
+      },
+      "homepage": "https://github.com/POC4135/calorie-tracker",
+      "repository": "https://github.com/POC4135/calorie-tracker",
+      "license": "MIT",
+      "category": "health",
+      "tags": [
+        "nutrition",
+        "calories",
+        "macros",
+        "indian-food",
+        "meal-planning"
+      ]
+    }
+  ]
+}

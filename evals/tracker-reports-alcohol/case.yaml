@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: tracker-reports-alcohol
+expected_outcome: |
+  Logs two beers and chicken 65, and states the grams of alcohol and their calories separately
+  because alcohol is not counted in protein, carbs, or fat.

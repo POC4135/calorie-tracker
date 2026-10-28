@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: menu-fits-remaining-budget
+expected_outcome: |
+  Recommends an order built around tandoori chicken or chicken tikka kebab with tandoori roti and
+  raita that fits about 700 kcal, ranks creamy curries lower, and gives specific ordering tips.

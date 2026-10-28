@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: planner-vegetarian-day
+expected_outcome: |
+  Builds a vegetarian day that the calculator checks: calories within 5% and protein at least 95%
+  of target, shown with PASS lines, plus prep notes and a grocery list.

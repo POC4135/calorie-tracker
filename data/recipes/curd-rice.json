@@ -1,0 +1,8 @@
+{"db_id": "curd-rice", "name": "Curd rice", "servings": 1, "cooked_weight_g": 240,
+ "source": "One bowl: 120 g cooked rice mashed with 110 g whole-milk dahi, tempered with 1 tsp oil, mustard seeds and curry leaves, 1/4 tsp salt.",
+ "ingredients": [
+  {"food": "rice-cooked", "grams": 120},
+  {"food": "yogurt-whole", "grams": 110},
+  {"food": "oil", "qty": 1, "unit": "tsp"},
+  {"food": "salt", "qty": 0.25, "unit": "tsp"},
+  {"food": "spices"}]}

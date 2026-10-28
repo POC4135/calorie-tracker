@@ -1,0 +1,7 @@
+schema_version: "1.1"
+name: tracker-setup-and-first-meal
+expected_outcome: |
+  Sets targets of about 2,400 kcal and 138 g protein, then logs the four lunch items in a table
+  whose headers carry the targets, with today's totals, % of target, and remaining rows, a
+  secondary fiber, added sugar and sodium table, concrete vegetarian protein suggestions, and a
+  confidence line.
