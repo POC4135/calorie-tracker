@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Questions and ideas
-    url: https://github.com/POC4135/calorie-tracker/discussions
-    about: Ask a question or share an idea.
+  - name: Questions (read the FAQ first)
+    url: https://github.com/POC4135/calorie-tracker/blob/main/docs/faq.md
+    about: Answers to common questions about accuracy, privacy, and setup.
+  - name: Install help
+    url: https://github.com/POC4135/calorie-tracker/blob/main/docs/install.md
+    about: Step-by-step install for claude.ai, Claude Code, other agents, and the API.

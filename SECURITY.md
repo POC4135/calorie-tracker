@@ -12,4 +12,4 @@ Skills are instructions and code that Claude follows. Read them first, especiall
 
 ## Reporting a vulnerability
 
-If you find a security problem (for example, a way the calculator could be made to read or write files it should not), please use GitHub's private vulnerability reporting on this repository (Security > Report a vulnerability) rather than a public issue. You can expect an acknowledgment within a week.
+If you find a security problem (for example, a way the calculator could be made to read or write files it should not), report it privately: use **Security > Report a vulnerability** on this repository if it is available, or open an issue that only asks the maintainer for a private contact, without details. You can expect an acknowledgment within a week.
