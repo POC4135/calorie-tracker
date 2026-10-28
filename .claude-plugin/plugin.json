@@ -10,6 +10,7 @@
   "homepage": "https://github.com/POC4135/calorie-tracker",
   "repository": "https://github.com/POC4135/calorie-tracker",
   "license": "MIT",
+  "icon": "./.claude-plugin/icon.png",
   "keywords": [
     "nutrition",
     "calories",

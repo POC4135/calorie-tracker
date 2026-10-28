@@ -76,7 +76,7 @@ These are real model runs billed to your account, so CI does not run them.
 
 1. Update `version` in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and each SKILL.md's `metadata.version` (the build check enforces that they match).
 2. Add an entry to `CHANGELOG.md`.
-3. Merge to `main`, then tag: `git tag v1.1.0 && git push origin v1.1.0`. The release workflow builds the zips and publishes the GitHub release.
+3. Merge to `main`. When the version in `plugin.json` changes, the release workflow tests, builds the zips, tags `vX.Y.Z`, and publishes the GitHub release with notes from the changelog. You can also run it by hand from the Actions tab.
 
 ## Style
 
